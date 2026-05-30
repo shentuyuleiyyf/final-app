@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 
 import matplotlib.pyplot as plt
+plt.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'SimHei', 'DejaVu Sans']
+plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
 import seaborn as sns
 import plotly.express as px
 
