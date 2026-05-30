@@ -3,28 +3,17 @@ import pandas as pd
 import numpy as np
 
 import matplotlib.pyplot as plt
-import matplotlib
-
-import os
-import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
+import os
 
-# 加载项目里的字体
+# ====================== 【核心修复】加载本地字体，100%解决中文乱码 ======================
 font_path = os.path.join(os.path.dirname(__file__), "fonts", "wqy-zenhei.ttc")
 my_font = FontProperties(fname=font_path)
 
-# 解决负号显示问题
-plt.rcParams['axes.unicode_minus'] = False
-
-
-# 强制指定文泉驿字体 + 兜底英文字体
-matplotlib.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'DejaVu Sans']
-# 解决负号显示为方框
-matplotlib.rcParams['axes.unicode_minus'] = False
-# 全局禁用缓存（避免旧字体配置残留）
-matplotlib.rcParams['backend'] = 'Agg'
-
-
+plt.rcParams['axes.unicode_minus'] = False  # 解决负号
+plt.rcParams['font.family'] = ['sans-serif']
+plt.rcParams['font.sans-serif'] = [font_path]  # 强制使用项目内字体
+# ====================================================================================
 
 import seaborn as sns
 import plotly.express as px
@@ -40,7 +29,6 @@ from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 
 import sqlite3
 import hashlib
-import os
 import secrets
 from datetime import datetime
 
@@ -48,9 +36,6 @@ from datetime import datetime
 # 基础配置
 # ---------------------------
 st.set_page_config(page_title="多元统计分析平台（含登录与用户管理）", layout="wide")
-
-plt.rcParams['font.sans-serif'] = ['SimHei']  # 黑体
-plt.rcParams['axes.unicode_minus'] = False
 
 DB_PATH = "app_users.db"
 
@@ -85,17 +70,14 @@ def init_db():
     """)
     conn.commit()
 
-    # 初始化一个默认管理员（如果不存在）
     c.execute("SELECT COUNT(*) FROM users WHERE role='admin'")
     admin_count = c.fetchone()[0]
     if admin_count == 0:
-         #默认管理员：admin / Admin@12345（你可在后台改掉）
+         #默认管理员：admin / Admin@12345
         create_user("admin", "Admin@12345", role="admin", conn=conn)
     conn.close()
 
 def hash_password(password: str, salt: str) -> str:
-    # PBKDF2-HMAC 更好；这里用 sha256+多轮也可。毕业设计建议 PBKDF2。
-    # 这里直接用 pbkdf2_hmac：
     dk = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 120_000)
     return dk.hex()
 
@@ -151,8 +133,6 @@ def is_admin():
 
 def logout():
     st.session_state["auth"] = {"is_login": False, "user": None}
-    # 清理数据也可以按需做（这里不强制）
-    # st.session_state.pop("df", None)
 
 # ---------------------------
 # Data Utils
@@ -167,7 +147,6 @@ def numeric_df(df: pd.DataFrame):
     return df.select_dtypes(include=[np.number])
 
 def data_profile(df: pd.DataFrame) -> pd.DataFrame:
-    # 简易数据画像表
     prof = []
     for col in df.columns:
         s = df[col]
@@ -338,7 +317,6 @@ def admin_user_management():
 # UI: Main App
 # ---------------------------
 def main_app():
-    # 侧边栏导航
     st.sidebar.title("📊 统计分析系统")
     st.sidebar.caption(f"当前用户：{current_user()['username']}（{current_user()['role']}）")
 
@@ -363,19 +341,16 @@ def main_app():
 
     choice = st.sidebar.selectbox("功能导航", menu)
 
-    # 管理功能
     if choice == "用户管理":
         admin_user_management()
         return
 
-    # 需要数据的功能：检查 df
     def require_df():
         if "df" not in st.session_state or st.session_state["df"] is None:
             st.warning("请先在「数据上传与预处理」上传数据。")
             return False
         return True
 
-    # --- 1. 数据上传与预处理 ---
     if choice == "数据上传与预处理":
         st.header("📂 数据导入与清洗")
         uploaded_file = st.file_uploader("上传 CSV 或 Excel 文件", type=["csv", "xlsx"])
@@ -415,7 +390,6 @@ def main_app():
                     log_action(current_user()["username"], "CLEAN_DATA", f"method={fill_method}, drop_dup={drop_dup}")
                     st.success("清洗完成！已更新当前数据。")
 
-    # --- 数据概览与质量 ---
     elif choice == "数据概览与质量":
         st.header("🧾 数据概览与质量报告")
         if not require_df():
@@ -448,7 +422,6 @@ def main_app():
             fig = px.bar(miss, title="各字段缺失率", labels={"index": "字段", "value": "缺失率"})
             st.plotly_chart(fig, use_container_width=True)
 
-    # --- 2. 相关性分析 ---
     elif choice == "相关性分析":
         st.header("🔍 相关性矩阵与散点矩阵")
         if not require_df():
@@ -462,7 +435,7 @@ def main_app():
         st.subheader("相关性热力图")
         fig_corr, ax = plt.subplots(figsize=(10, 6))
         sns.heatmap(df.corr(), annot=False, cmap="coolwarm", ax=ax)
-        ax.set_title("Correlation Heatmap")
+        ax.set_title("相关性热力图", fontproperties=my_font)
         st.pyplot(fig_corr)
 
         st.subheader("交互式散点矩阵 (Plotly)")
@@ -475,7 +448,6 @@ def main_app():
             fig_scatter = px.scatter_matrix(df[selected_cols])
             st.plotly_chart(fig_scatter, use_container_width=True)
 
-    # --- 异常值检测 ---
     elif choice == "异常值检测":
         st.header("🚨 异常值检测")
         if not require_df():
@@ -505,7 +477,6 @@ def main_app():
 
         st.info("提示：异常值并不一定是错误数据；可结合业务背景决定是否处理。")
 
-    # --- 特征选择 ---
     elif choice == "特征选择":
         st.header("🧩 特征选择（数值列）")
         if not require_df():
@@ -533,13 +504,11 @@ def main_app():
         st.success(f"最终建议保留 {len(final_cols)} 列：{final_cols}")
 
         if st.button("将筛选后的数据保存为当前数据（仅保留这些数值列）", type="primary"):
-            # 注意：这里只保留筛选后的数值列；如果你希望保留原非数值列，可改为 df_all.join(...)
             st.session_state["df"] = st.session_state["df"][final_cols].copy()
             log_action(current_user()["username"], "FEATURE_SELECT", f"final_cols={len(final_cols)}")
             st.success("已更新当前数据。")
             st.rerun()
 
-    # --- 3. PCA 降维 ---
     elif choice == "PCA降维":
         st.header("📉 主成分分析 (PCA)")
         if not require_df():
@@ -571,13 +540,11 @@ def main_app():
         fig_pca = px.scatter(pca_df, x="PC1", y="PC2", title="PCA 2D 投影")
         st.plotly_chart(fig_pca, use_container_width=True)
 
-        # 载荷（贡献）
         loadings = pd.DataFrame(pca.components_.T, index=df.columns,
                                 columns=[f"PC{i+1}" for i in range(n_components)])
         st.subheader("主成分载荷矩阵（Loadings）")
         st.dataframe(loadings, use_container_width=True)
 
-    # --- 4. 聚类分析 ---
     elif choice == "聚类分析":
         st.header("🧪 聚类分析 (K-means + 层次聚类)")
         if not require_df():
@@ -591,7 +558,6 @@ def main_app():
         st.subheader("K-means")
         k = st.sidebar.slider("选择 K 值", 2, 12, 3)
 
-        # 肘部法则
         with st.expander("查看肘部法则（WCSS）", expanded=False):
             max_k = st.slider("计算到的最大K", 3, 15, 10)
             wcss = []
@@ -617,17 +583,15 @@ def main_app():
         centers = pd.DataFrame(kmeans.cluster_centers_, columns=df.columns)
         st.dataframe(centers, use_container_width=True)
 
-        # 层次聚类
         if st.checkbox("显示层次聚类树状图"):
-            st.subheader("层次聚类 (Dendrogram)")
+            st.subheader("层次聚类")
             use_cols = df.columns[:min(8, df.shape[1])]
             fig_dendro, ax = plt.subplots(figsize=(10, 5))
             Z = linkage(df[use_cols], "ward")
             dendrogram(Z, ax=ax)
-            ax.set_title("Hierarchical Clustering Dendrogram")
+            ax.set_title("层次聚类树状图", fontproperties=my_font)
             st.pyplot(fig_dendro)
 
-    # --- 5. 多元回归分析 ---
     elif choice == "多元回归分析":
         st.header("📈 多元线性回归（含评估）")
         if not require_df():
@@ -651,14 +615,12 @@ def main_app():
                 X, y, test_size=test_size, random_state=42
             )
 
-            # statsmodels（可解释性强）
             X_train_sm = sm.add_constant(X_train)
             model = sm.OLS(y_train, X_train_sm).fit()
 
             st.subheader("回归摘要（训练集）")
             st.text(model.summary())
 
-            # 评估（测试集）
             X_test_sm = sm.add_constant(X_test, has_constant="add")
             y_pred = model.predict(X_test_sm)
 
@@ -674,7 +636,7 @@ def main_app():
 
             st.subheader("预测 vs 真值")
             pv = pd.DataFrame({"y_true": y_test.values, "y_pred": y_pred.values})
-            fig_pv = px.scatter(pv, x="y_true", y="y_pred", title="Predicted vs Actual")
+            fig_pv = px.scatter(pv, x="y_true", y="y_pred", title="预测值 vs 真实值")
             st.plotly_chart(fig_pv, use_container_width=True)
 
             st.subheader("残差分析图")
@@ -682,15 +644,14 @@ def main_app():
             fig_res, ax = plt.subplots(figsize=(7, 4))
             sns.scatterplot(x=y_pred.values, y=resid, ax=ax)
             ax.axhline(0, linestyle="--")
-            ax.set_title("Residuals vs Fitted (Test Set)")
-            ax.set_xlabel("Fitted")
-            ax.set_ylabel("Residual")
+            ax.set_title("残差分析图", fontproperties=my_font)
+            ax.set_xlabel("拟合值", fontproperties=my_font)
+            ax.set_ylabel("残差", fontproperties=my_font)
             st.pyplot(fig_res)
 
             log_action(current_user()["username"], "REGRESSION_RUN",
                        f"y={y_var}, x={x_vars}, test_size={test_size}")
 
-    # --- 导出与报告 ---
     elif choice == "导出与报告":
         st.header("📦 导出与报告")
         if not require_df():
@@ -709,7 +670,6 @@ def main_app():
         st.subheader("下载数据摘要（Profiling + describe）")
         prof = data_profile(df)
         desc = numeric_df(df).describe().T.reset_index().rename(columns={"index": "字段"})
-        # 合并成一个 excel 更好，但为了简单输出两个 CSV
         col1, col2 = st.columns(2)
         with col1:
             st.download_button(
@@ -730,9 +690,8 @@ def main_app():
 
         st.divider()
 
-        st.subheader("一键导出“分析简报”（兼容你原逻辑）")
+        st.subheader("一键导出“分析简报”")
         if st.button("生成并导出 analysis_report.csv", type="primary"):
-            # 简单：直接导出当前数据
             log_action(current_user()["username"], "EXPORT_REPORT", "analysis_report.csv")
             st.download_button(
                 label="点击下载 analysis_report.csv",
