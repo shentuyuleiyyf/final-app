@@ -3,8 +3,18 @@ import pandas as pd
 import numpy as np
 
 import matplotlib.pyplot as plt
-plt.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'SimHei', 'DejaVu Sans']
-plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
+import matplotlib
+
+
+# 强制指定文泉驿字体 + 兜底英文字体
+matplotlib.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'DejaVu Sans']
+# 解决负号显示为方框
+matplotlib.rcParams['axes.unicode_minus'] = False
+# 全局禁用缓存（避免旧字体配置残留）
+matplotlib.rcParams['backend'] = 'Agg'
+
+
+
 import seaborn as sns
 import plotly.express as px
 
