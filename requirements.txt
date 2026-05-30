@@ -10,3 +10,4 @@ statsmodels
 sqlalchemy
 bcrypt
 openpyxl
+fonts-wqy-zenhei
