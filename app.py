@@ -5,6 +5,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 
+import os
+import matplotlib.pyplot as plt
+from matplotlib.font_manager import FontProperties
+
+# 加载项目里的字体
+font_path = os.path.join(os.path.dirname(__file__), "fonts", "wqy-zenhei.ttc")
+my_font = FontProperties(fname=font_path)
+
+# 解决负号显示问题
+plt.rcParams['axes.unicode_minus'] = False
+
 
 # 强制指定文泉驿字体 + 兜底英文字体
 matplotlib.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'DejaVu Sans']
